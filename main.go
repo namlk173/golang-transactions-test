@@ -13,10 +13,12 @@ import (
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
+
+	// THIS IS 2 ID ACCOUNT THAT EXISTING IN MY DATABASE
 	idFrom, _ := primitive.ObjectIDFromHex("6401bd3f2b7d54b91cd0e719")
 	idTo, _ := primitive.ObjectIDFromHex("6401bd492b7d54b91cd0e71a")
 
-	app := boostrap.NewInformation()
+	app := boostrap.NewApplication()
 	defer app.CloseDBConnection()
 	database := app.Client.Database(app.Env.DBName)
 	transferRepository := repository.NewTransferRepository(database, "transfer", "account")

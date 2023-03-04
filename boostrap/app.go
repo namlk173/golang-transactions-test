@@ -9,7 +9,7 @@ type Application struct {
 	Client mongoImplement.Client
 }
 
-func NewInformation() Application {
+func NewApplication() Application {
 	env := NewEnv()
 	return Application{
 		Env:    env,
