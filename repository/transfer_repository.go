@@ -30,12 +30,26 @@ func NewTransferRepository(db mongoImplement.Database, transferColl, accountColl
 func (tran *transferRepository) ListTransferByAccount(ctx context.Context, id primitive.ObjectID) ([]model.TransferResponse, error) {
 	var transfers []model.TransferResponse
 	collection := tran.db.Collection(tran.TransferColl)
-	cur, err := collection.Find(ctx, bson.D{})
+	filter := bson.D{
+		{"$or", []interface{}{
+			bson.D{{"from._id", id}},
+			bson.D{{"to._id", id}},
+		}},
+	}
+	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		return transfers, err
 	}
 
 	err = cur.All(ctx, &transfers)
+	if err != nil {
+		return []model.TransferResponse{}, err
+	}
+
+	if transfers == nil {
+		return transfers, errors.New("no transfer for this account")
+	}
+
 	return transfers, err
 }
 
@@ -44,7 +58,7 @@ func (tran *transferRepository) GetAccountByID(ctx context.Context, id primitive
 	var account model.Account
 	err := collection.FindOne(ctx, bson.D{{"_id", id}}).Decode(&account)
 	if err != nil {
-		return &model.Account{}, err
+		return &model.Account{}, errors.New("not found account")
 	}
 
 	return &account, nil
@@ -72,14 +86,14 @@ func (tran *transferRepository) Transfer(ctx context.Context, transfer *model.Tr
 	callback := func(sessCtx mongo.SessionContext) (interface{}, error) {
 
 		// Increase value of received account more (Amount transfer)
-		toAccountUpdateQuery := bson.D{{"$inc", bson.D{{"value", transfer.Amount}}}}
+		toAccountUpdateQuery := bson.D{{"$inc", bson.D{{"value", int(transfer.Amount)}}}}
 		_, err := accountCollection.UpdateOne(sessCtx, bson.D{{"_id", transfer.To}}, toAccountUpdateQuery)
 		if err != nil {
 			return nil, err
 		}
 
 		// Decrease value of send account about (Amount transfer)
-		fromAccountUpdateQuery := bson.D{{"$inc", bson.D{{"value", -transfer.Amount}}}}
+		fromAccountUpdateQuery := bson.D{{"$inc", bson.D{{"value", -int(transfer.Amount)}}}}
 		_, err = accountCollection.UpdateOne(sessCtx, bson.D{{"_id", transfer.From}}, fromAccountUpdateQuery)
 		if err != nil {
 			return nil, err
@@ -106,7 +120,7 @@ func (tran *transferRepository) Transfer(ctx context.Context, transfer *model.Tr
 		transferWriter := model.TransferWriter{
 			From:      *accountFrom,
 			To:        *accountTo,
-			Amount:    transfer.Amount,
+			Amount:    int(transfer.Amount),
 			CreatedAt: time.Now(),
 		}
 
@@ -126,6 +140,6 @@ func (tran *transferRepository) Transfer(ctx context.Context, transfer *model.Tr
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result, nil
 }

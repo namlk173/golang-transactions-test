@@ -9,10 +9,10 @@ import (
 )
 
 func NewMongoDatabase(env *Env) mongoImplement.Client {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	databaseURL := fmt.Sprintf("mongodb://%v:%v", env.DBHost, env.DBPort)
+	databaseURL := fmt.Sprintf("mongodb://%v:%v/?directConnection=true&replicaSet=rs0", env.DBHost, env.DBPort)
 	if env.DBUser != "" {
 		databaseURL = fmt.Sprintf("mongodb://%v:%v@%v:%v", env.DBUser, env.DBPass, env.DBHost, env.DBPort)
 	}

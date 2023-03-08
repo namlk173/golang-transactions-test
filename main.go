@@ -2,30 +2,42 @@ package main
 
 import (
 	"banking/boostrap"
-	"banking/model"
+	"banking/handler"
 	"banking/repository"
+	route "banking/router"
+	"banking/usecase"
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"log"
+	"net/http"
 	"time"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	// THIS IS 2 ID ACCOUNT THAT EXISTING IN MY DATABASE
-	idFrom, _ := primitive.ObjectIDFromHex("6401bd3f2b7d54b91cd0e719")
-	idTo, _ := primitive.ObjectIDFromHex("6401bd492b7d54b91cd0e71a")
-
+	ctx := context.Background()
 	app := boostrap.NewApplication()
-	defer app.CloseDBConnection()
-	database := app.Client.Database(app.Env.DBName)
-	transferRepository := repository.NewTransferRepository(database, "transfer", "account")
-	transfer := model.TransferRequest{
-		From:   idFrom,
-		To:     idTo,
-		Amount: 10000,
+	accountRepository := repository.NewAccountRepository(app.Client.Database(app.Env.DBName), "account")
+	accountUseCase := usecase.NewAccountUseCase(accountRepository, time.Duration(app.Env.ContextTimeout)*time.Second)
+	accountHandler := handler.AccountHandler{
+		AccountUseCase: accountUseCase,
+		Ctx:            ctx,
 	}
-	fmt.Println(transferRepository.Transfer(ctx, &transfer))
+	transferRepository := repository.NewTransferRepository(app.Client.Database(app.Env.DBName), "transfer", "account")
+	transferUseCase := usecase.NewTransferUseCase(transferRepository, time.Duration(app.Env.ContextTimeout)*time.Second)
+
+	transferHandler := handler.TransferHandler{
+		TransferUseCase: transferUseCase,
+		Ctx:             ctx,
+	}
+
+	router := route.NewRouter(accountHandler, transferHandler)
+
+	serve := &http.Server{
+		Addr:         fmt.Sprintf("%v:%v", app.Env.ServerAddress, app.Env.ServerPort),
+		Handler:      router,
+		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  5 * time.Second,
+	}
+	fmt.Printf("Sever are running in port: %v\n", app.Env.ServerPort)
+	log.Fatalln(serve.ListenAndServe())
 }

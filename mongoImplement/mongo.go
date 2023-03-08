@@ -5,6 +5,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"time"
 )
 
 type Collection interface {
@@ -66,7 +67,8 @@ type mongoSingleResult struct {
 
 // Initialize mongoCLient and implement Client Interface
 func NewClient(url string) (Client, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(url))
+	clientOptions := options.Client().SetTimeout(time.Second * 2)
+	client, err := mongo.NewClient(clientOptions.ApplyURI(url))
 	return &mongoClient{client: client}, err
 }
 

@@ -4,6 +4,7 @@ import (
 	"banking/model"
 	"banking/mongoImplement"
 	"context"
+	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -30,6 +31,10 @@ func (acc *accountRepository) ListAccount(ctx context.Context) ([]model.Account,
 
 	if err := cur.All(ctx, &accounts); err != nil {
 		return accounts, err
+	}
+
+	if accounts == nil {
+		return accounts, errors.New("no accounts found")
 	}
 
 	return accounts, nil

@@ -3,6 +3,7 @@ module banking
 go 1.20
 
 require (
+	github.com/gorilla/mux v1.8.0
 	github.com/spf13/viper v1.15.0
 	go.mongodb.org/mongo-driver v1.11.2
 )
